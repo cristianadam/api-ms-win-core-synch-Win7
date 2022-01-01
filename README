@@ -1,0 +1,13 @@
+Usage instructions:
+  1. Download the DLL from the releases page.
+  2. Install SBCL (x86 or x64).
+  3. Copy the DLL to the SBCL installation directory (MAKE SURE that the DLL
+     you copy matches the CPU architecture of SBCL that you install).
+  4. Run.
+
+Tested: Windows 7 x64, SBCL 2.2.0 x86 and x64
+
+The code was compiled on Visual Studio 2010. In order to compile it yourself,
+create a new blank DLL project, and add the .c source code file. Change the
+project configuration according to your needs and compile. Default settings
+should work fine.
