@@ -5,7 +5,9 @@ Usage instructions:
      you copy matches the CPU architecture of SBCL that you install).
   4. Run.
 
-Tested: Windows 7 x64, SBCL 2.2.0 x86 and x64
+Tested: Windows 7 x64, SBCL 2.2.0 x86 and x64. This DLL should also work on
+Windows Vista although that has not been extensively tested. If there is a
+bug, please open an issue or contact vxiiduu#4598 on discord.
 
 The code was compiled on Visual Studio 2010. In order to compile it yourself,
 create a new blank DLL project, and add the .c source code file. Change the
