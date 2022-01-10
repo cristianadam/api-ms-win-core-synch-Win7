@@ -22,42 +22,56 @@ BOOL WINAPI DllMain(
 		memset(AddrCVarAssocTbl, 0, sizeof(AddrCVarAssocTbl));
 		InitializeCriticalSection(&AddrCVarAssocTblLock);
 		break;
+	case DLL_PROCESS_DETACH:
+		DeleteCriticalSection(&AddrCVarAssocTblLock);
+		break;
 	}
 
 	return TRUE;
 }
 
 // Return TRUE if memory is the same. FALSE if memory is different.
-BOOL CompareVolatileMemory(volatile const void *A1, const void *A2, size_t sz)
+static BOOL CompareVolatileMemory(const volatile void *A1, const void *A2, size_t size)
 {
-	size_t i;
-
-	for (i = 0; i < sz; ++i) {
-		if (((BYTE*) A1)[i] != ((BYTE*) A2)[i]) return FALSE;
+	switch (size) {
+	case 1:		return (*(const UINT8*)A1 == *(const UINT8*)A2);
+	case 2:		return (*(const UINT16*)A1 == *(const UINT16*)A2);
+	case 4:		return (*(const UINT32*)A1 == *(const UINT32*)A2);
+	case 8:		return (*(const UINT64*)A1 == *(const UINT64*)A2);
+	default:	return FALSE;
 	}
-
-	return TRUE;
 }
 
-DLLAPI BOOL WaitOnAddress(
+DLLAPI BOOL WINAPI WaitOnAddress(
 	_In_ volatile VOID *Address,
 	_In_ PVOID CompareAddress,
 	_In_ SIZE_T AddressSize,
 	_In_ DWORD dwMilliseconds)
 {
-	CRITICAL_SECTION DummyLock;
 	SIZE_T idxAddrCVarAssoc;
 	SIZE_T availableNullSlot;
 	BOOL ReturnValue;
 	DWORD SleepConditionVariableCSError;
 
+	if (!Address || !CompareAddress) {
+		SetLastError(ERROR_INVALID_PARAMETER);
+		return FALSE;
+	}
+
+	if (!(AddressSize == 1 || AddressSize == 2 || AddressSize == 4 || AddressSize == 8)) {
+		SetLastError(ERROR_INVALID_PARAMETER);
+		return FALSE;
+	}
+
+	EnterCriticalSection(&AddrCVarAssocTblLock);
 	if (!CompareVolatileMemory(Address, CompareAddress, AddressSize)) {
+		LeaveCriticalSection(&AddrCVarAssocTblLock);
+		SetLastError(ERROR_SUCCESS);
 		return TRUE;
 	}
 
 	// look for first slot in AddrCVarAssocTbl which contains either the correct Address
 	// or an available NULL slot if we can't find that
-	EnterCriticalSection(&AddrCVarAssocTblLock);
 	for (idxAddrCVarAssoc = 0; idxAddrCVarAssoc < AddrCVarAssocTblSize; ++idxAddrCVarAssoc) {
 		if (AddrCVarAssocTbl[idxAddrCVarAssoc] && AddrCVarAssocTbl[idxAddrCVarAssoc]->Address == Address) {
 			break;
@@ -76,15 +90,10 @@ DLLAPI BOOL WaitOnAddress(
 	} else {
 		++AddrCVarAssocTbl[idxAddrCVarAssoc]->NumberOfWaiters;
 	}
-	LeaveCriticalSection(&AddrCVarAssocTblLock);
 
-	InitializeCriticalSection(&DummyLock); // dummy critical section
-	EnterCriticalSection(&DummyLock);
-	ReturnValue = SleepConditionVariableCS(&AddrCVarAssocTbl[idxAddrCVarAssoc]->CVar, &DummyLock, dwMilliseconds);
+	ReturnValue = SleepConditionVariableCS(&AddrCVarAssocTbl[idxAddrCVarAssoc]->CVar, &AddrCVarAssocTblLock, dwMilliseconds);
 	SleepConditionVariableCSError = GetLastError();
-	LeaveCriticalSection(&DummyLock);
 
-	EnterCriticalSection(&AddrCVarAssocTblLock);
 	if (--AddrCVarAssocTbl[idxAddrCVarAssoc]->NumberOfWaiters == 0) {
 		free(AddrCVarAssocTbl[idxAddrCVarAssoc]);
 		AddrCVarAssocTbl[idxAddrCVarAssoc] = NULL; // important - do not remove
@@ -95,7 +104,7 @@ DLLAPI BOOL WaitOnAddress(
 	return ReturnValue;
 }
 
-DLLAPI void WakeByAddressAll(
+DLLAPI void WINAPI WakeByAddressAll(
 	_In_ PVOID Address)
 {
 	SIZE_T idxAddrCVarAssoc;
@@ -111,7 +120,7 @@ DLLAPI void WakeByAddressAll(
 	return;
 }
 
-DLLAPI void WakeByAddressSingle(
+DLLAPI void WINAPI WakeByAddressSingle(
 	_In_ PVOID Address)
 {
 	SIZE_T idxAddrCVarAssoc;
