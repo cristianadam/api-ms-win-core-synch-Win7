@@ -1,6 +1,5 @@
 #include <Windows.h>
 #include <string.h>
-#define DLLAPI __declspec(dllexport)
 
 typedef struct _ADDR_CVAR_ASSOC {
 	volatile VOID *Address;
@@ -42,7 +41,7 @@ static BOOL CompareVolatileMemory(const volatile void *A1, const void *A2, size_
 	}
 }
 
-DLLAPI BOOL WINAPI WaitOnAddress(
+BOOL WINAPI WaitOnAddress(
 	_In_ volatile VOID *Address,
 	_In_ PVOID CompareAddress,
 	_In_ SIZE_T AddressSize,
@@ -104,7 +103,7 @@ DLLAPI BOOL WINAPI WaitOnAddress(
 	return ReturnValue;
 }
 
-DLLAPI void WINAPI WakeByAddressAll(
+void WINAPI WakeByAddressAll(
 	_In_ PVOID Address)
 {
 	SIZE_T idxAddrCVarAssoc;
@@ -120,7 +119,7 @@ DLLAPI void WINAPI WakeByAddressAll(
 	return;
 }
 
-DLLAPI void WINAPI WakeByAddressSingle(
+void WINAPI WakeByAddressSingle(
 	_In_ PVOID Address)
 {
 	SIZE_T idxAddrCVarAssoc;
@@ -136,8 +135,12 @@ DLLAPI void WINAPI WakeByAddressSingle(
 	return;
 }
 
+#pragma comment(linker, "/export:WaitOnAddress")
+#pragma comment(linker, "/export:WakeByAddressAll")
+#pragma comment(linker, "/export:WakeByAddressSingle")
+
 #pragma comment(linker, "/export:CancelWaitableTimer=kernel32.CancelWaitableTimer")
-#pragma comment(linker, "/export:CreateEventA=kernel32.CreateEventA")
+#pragma comment(linker, "/export:CreateEventW=kernel32.CreateEventW")
 #pragma comment(linker, "/export:EnterCriticalSection=kernel32.EnterCriticalSection")
 #pragma comment(linker, "/export:InitializeConditionVariable=kernel32.InitializeConditionVariable")
 #pragma comment(linker, "/export:InitializeCriticalSection=kernel32.InitializeCriticalSection")
@@ -150,3 +153,7 @@ DLLAPI void WINAPI WakeByAddressSingle(
 #pragma comment(linker, "/export:SleepConditionVariableCS=kernel32.SleepConditionVariableCS")
 #pragma comment(linker, "/export:TryEnterCriticalSection=kernel32.TryEnterCriticalSection")
 #pragma comment(linker, "/export:WakeAllConditionVariable=kernel32.WakeAllConditionVariable")
+#pragma comment(linker, "/export:ReleaseSemaphore=kernel32.ReleaseSemaphore")
+#pragma comment(linker, "/export:WaitForMultipleObjectsEx=kernel32.WaitForMultipleObjectsEx")
+#pragma comment(linker, "/export:WaitForSingleObject=kernel32.WaitForSingleObject")
+#pragma comment(linker, "/export:WaitForSingleObjectEx=kernel32.WaitForSingleObjectEx")
